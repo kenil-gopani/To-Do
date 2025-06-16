@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time To-Do App</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Use Inter font family */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styling for completed tasks */
+        .completed {
+            text-decoration: line-through;
+            color: #9ca3af; /* gray-400 */
+        }
+        /* Style for the loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3; /* Light grey */
+            border-top: 4px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+                <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800 dark:text-white">My To-Do List</h1>
+                <p class="text-center text-gray-500 dark:text-gray-400 mt-1">Your tasks are saved in real-time.</p>
+            </div>
+
+            <!-- Add Task Form -->
+            <div class="p-6">
+                <form id="add-task-form" class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="task-input" placeholder="What do you need to do?" class="flex-grow px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition" required>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <i class="fas fa-plus mr-2"></i> Add Task
+                    </button>
+                </form>
+            </div>
+
+            <!-- Task List -->
+            <div id="task-list-container" class="p-6">
+                <!-- Loading Spinner -->
+                <div id="loader" class="flex justify-center items-center py-8">
+                    <div class="loader"></div>
+                </div>
+                <!-- Task list will be rendered here -->
+                <ul id="task-list" class="space-y-3"></ul>
+                <!-- Message for when there are no tasks -->
+                <p id="no-tasks-message" class="text-center text-gray-500 dark:text-gray-400 py-8 hidden">You have no tasks yet. Add one above!</p>
+            </div>
+            
+            <!-- Footer with User ID -->
+            <div id="user-info" class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 rounded-b-xl hidden">
+                 <p class="text-center text-xs text-gray-500 dark:text-gray-400">
+                    <span class="font-semibold">User ID:</span> <span id="user-id-display"></span>
+                 </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import necessary functions from the Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Firebase Configuration and Initialization ---
+
+        // These global variables are provided by the environment.
+        // __firebase_config: Contains the configuration keys for your Firebase project.
+        // __app_id: A unique identifier for this application instance.
+        // __initial_auth_token: A custom token for user authentication.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-todo-app';
+        
+        // Enable detailed logging for debugging Firestore.
+        setLogLevel('debug');
+
+        let app, auth, db, userId;
+        let tasksCollectionRef;
+        let unsubscribeTasks; // To hold the onSnapshot listener unsubscribe function
+
+        // --- DOM Element References ---
+        const taskList = document.getElementById('task-list');
+        const addTaskForm = document.getElementById('add-task-form');
+        const taskInput = document.getElementById('task-input');
+        const loader = document.getElementById('loader');
+        const noTasksMessage = document.getElementById('no-tasks-message');
+        const userInfo = document.getElementById('user-info');
+        const userIdDisplay = document.getElementById('user-id-display');
+
+        /**
+         * Initializes Firebase and sets up authentication.
+         * This function is the entry point for the application's logic.
+         */
+        async function main() {
+            try {
+                // Initialize Firebase services
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                
+                await setPersistence(auth, browserLocalPersistence);
+
+                // Listen for changes in authentication state
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        // User is signed in.
+                        console.log("User is authenticated with UID:", user.uid);
+                        userId = user.uid;
+
+                        // Display user ID in the footer
+                        userIdDisplay.textContent = userId;
+                        userInfo.classList.remove('hidden');
+
+                        // Now that we have a user, set up the Firestore collection reference
+                        // Data is stored privately for each user under their unique userId.
+                        tasksCollectionRef = collection(db, `artifacts/${appId}/users/${userId}/tasks`);
+                        
+                        // Detach any existing listener before attaching a new one
+                        if (unsubscribeTasks) {
+                            unsubscribeTasks();
+                        }
+                        // Start listening for real-time updates to tasks
+                        listenForTasks();
+                    } else {
+                        // User is signed out.
+                        console.log("User is not authenticated. Signing in...");
+                        signIn(); // Attempt to sign in if not authenticated.
+                    }
+                });
+
+            } catch (error) {
+                console.error("Error initializing Firebase:", error);
+                // Display an error message to the user if initialization fails.
+                loader.innerHTML = '<p class="text-red-500">Error: Could not connect to the service.</p>';
+            }
+        }
+        
+        /**
+         * Signs the user in, either with a custom token if provided, or anonymously.
+         */
+        async function signIn() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                    console.log("Signed in with custom token.");
+                } else {
+                    await signInAnonymously(auth);
+                    console.log("Signed in anonymously.");
+                }
+            } catch (error) {
+                console.error("Authentication failed:", error);
+                loader.innerHTML = '<p class="text-red-500">Error: Authentication failed.</p>';
+            }
+        }
+
+        /**
+         * Sets up a real-time listener for the user's tasks in Firestore.
+         */
+        function listenForTasks() {
+            if (!tasksCollectionRef) return;
+            
+            // The q object is a query against the collection.
+            const q = query(tasksCollectionRef);
+
+            // onSnapshot creates a real-time listener.
+            // The callback function will be executed every time the data changes.
+            unsubscribeTasks = onSnapshot(q, (querySnapshot) => {
+                const tasks = [];
+                querySnapshot.forEach((doc) => {
+                    tasks.push({ id: doc.id, ...doc.data() });
+                });
+                renderTasks(tasks);
+            }, (error) => {
+                console.error("Error fetching tasks:", error);
+                loader.innerHTML = '<p class="text-red-500">Error: Could not fetch tasks.</p>';
+            });
+        }
+
+        /**
+         * Renders the list of tasks to the DOM.
+         * @param {Array} tasks - An array of task objects.
+         */
+        function renderTasks(tasks) {
+            // Clear the existing list
+            taskList.innerHTML = '';
+
+            // Hide the loader
+            loader.style.display = 'none';
+
+            if (tasks.length === 0) {
+                // Show the "no tasks" message if the list is empty
+                noTasksMessage.classList.remove('hidden');
+            } else {
+                // Hide the "no tasks" message
+                noTasksMessage.classList.add('hidden');
+                
+                // Sort tasks so that incomplete ones are at the top
+                tasks.sort((a, b) => a.completed - b.completed);
+                
+                tasks.forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = `flex items-center justify-between p-4 bg-white dark:bg-gray-700/50 rounded-lg shadow-sm transition-all duration-300`;
+                    li.dataset.id = task.id;
+
+                    // Add a class if the task is completed for styling
+                    if (task.completed) {
+                        li.classList.add('opacity-60');
+                    }
+
+                    const taskTextClass = task.completed ? 'completed' : '';
+
+                    li.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <input type="checkbox" ${task.completed ? 'checked' : ''} class="task-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                            <span class="task-text text-gray-800 dark:text-gray-200 ${taskTextClass}">${task.text}</span>
+                        </div>
+                        <button class="delete-btn text-gray-400 hover:text-red-500 transition-colors">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    `;
+                    taskList.appendChild(li);
+                });
+            }
+        }
+        
+        /**
+         * Handles the form submission to add a new task.
+         */
+        addTaskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const taskText = taskInput.value.trim();
+
+            if (taskText && tasksCollectionRef) {
+                try {
+                    // Add a new document to the Firestore collection
+                    await addDoc(tasksCollectionRef, {
+                        text: taskText,
+                        completed: false,
+                        createdAt: new Date() // Store creation timestamp
+                    });
+                    taskInput.value = ''; // Clear the input field
+                } catch (error) {
+                    console.error("Error adding task: ", error);
+                }
+            }
+        });
+
+        /**
+         * Handles clicks on the task list for deleting or toggling completion.
+         * Uses event delegation to listen for clicks on child elements.
+         */
+        taskList.addEventListener('click', async (e) => {
+            const target = e.target;
+            const li = target.closest('li');
+            if (!li) return;
+            
+            const docId = li.dataset.id;
+            const docRef = doc(db, `artifacts/${appId}/users/${userId}/tasks`, docId);
+
+            // Check if the delete button was clicked
+            if (target.closest('.delete-btn')) {
+                try {
+                    await deleteDoc(docRef);
+                } catch (error) {
+                    console.error("Error deleting task: ", error);
+                }
+            }
+            // Check if the checkbox was clicked
+            else if (target.classList.contains('task-checkbox')) {
+                const isCompleted = target.checked;
+                try {
+                    await updateDoc(docRef, {
+                        completed: isCompleted
+                    });
+                } catch (error) {
+                    console.error("Error updating task: ", error);
+                }
+            }
+        });
+
+        // --- Application Start ---
+        main();
+
+    </script>
+</body>
+</html>

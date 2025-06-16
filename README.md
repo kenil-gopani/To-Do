@@ -1,6 +1,5 @@
 Here's a well-formatted `README.md` for your **Real-Time To-Do App (Glass UI)** project:
 
-````markdown
 # 📝 Real-Time To-Do App (Glass UI)
 
 A modern, real-time To-Do application with a sleek **Glass UI**, powered by **Firebase Firestore**. Add, mark as complete, soft delete, and undo tasks—all in real time across multiple devices. ✨
@@ -62,7 +61,6 @@ A modern, real-time To-Do application with a sleek **Glass UI**, powered by **Fi
      appId: "YOUR_APP_ID",
      measurementId: "YOUR_MEASUREMENT_ID" // Optional
    };
-````
 
 ### 4. 🔐 Enable Firebase Authentication
 

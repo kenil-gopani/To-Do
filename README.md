@@ -1,6 +1,4 @@
-Here's a well-formatted `README.md` for your **Real-Time To-Do App (Glass UI)** project:
-
-# 📝 Real-Time To-Do App (Glass UI)
+ # 📝 Real-Time To-Do App (Glass UI)
 
 A modern, real-time To-Do application with a sleek **Glass UI**, powered by **Firebase Firestore**. Add, mark as complete, soft delete, and undo tasks—all in real time across multiple devices. ✨
 
@@ -117,11 +115,6 @@ Feel free to use, modify, and distribute it!
 
 ---
 
-## 📷 Screenshot
-
-![Glass UI To-Do App Screenshot](screenshot.png) <!-- Replace with your actual screenshot if available -->
-
----
 
 ## 🙌 Acknowledgements
 

@@ -102,10 +102,17 @@
         .task-item-glass .task-text {
             color: #ffffff; /* Default task text color */
         }
+        /* Specific styling for the delete/undo button */
         .task-item-glass .delete-btn {
+            background: transparent; /* No background */
+            border: none; /* No border */
+            box-shadow: none; /* No shadow */
+            padding: 0.5rem; /* Ensure padding for click area */
             color: rgba(255, 255, 255, 0.6); /* Lighter trash icon */
         }
         .task-item-glass .delete-btn:hover {
+            background: rgba(255, 255, 255, 0.1); /* Slight hover background */
+            border-radius: 9999px; /* Make it circular on hover */
             color: #ef4444; /* Red on hover */
         }
         .glass-container .loader {
@@ -133,6 +140,7 @@
             color: #4CAF50; /* Green for "undo" button */
         }
         .soft-deleted .delete-btn:hover {
+            background: rgba(255, 255, 255, 0.1); /* Slight hover background */
             color: #66bb6a; /* Lighter green on hover for "undo" */
         }
     </style>

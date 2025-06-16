@@ -13,16 +13,16 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Use Inter font family */
+        /* Use Inter font family for the entire body */
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Custom styling for completed tasks */
+        /* Custom styling for completed tasks to add a line-through and fade */
         .completed {
             text-decoration: line-through;
             color: #9ca3af; /* gray-400 */
         }
-        /* Style for the loading spinner */
+        /* Style for the loading spinner animation */
         .loader {
             border: 4px solid #f3f3f3; /* Light grey */
             border-top: 4px solid #3498db; /* Blue */
@@ -31,6 +31,7 @@
             height: 40px;
             animation: spin 1s linear infinite;
         }
+        /* Keyframes for the spinner rotation animation */
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -41,13 +42,13 @@
 
     <div class="w-full max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
         <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl">
-            <!-- Header -->
+            <!-- Header section of the To-Do app -->
             <div class="p-6 border-b border-gray-200 dark:border-gray-700">
                 <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800 dark:text-white">My To-Do List</h1>
                 <p class="text-center text-gray-500 dark:text-gray-400 mt-1">Your tasks are saved in real-time.</p>
             </div>
 
-            <!-- Add Task Form -->
+            <!-- Form for adding new tasks -->
             <div class="p-6">
                 <form id="add-task-form" class="flex flex-col sm:flex-row gap-3">
                     <input type="text" id="task-input" placeholder="What do you need to do?" class="flex-grow px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition" required>
@@ -57,28 +58,28 @@
                 </form>
             </div>
 
-            <!-- Task List -->
+            <!-- Container for the task list -->
             <div id="task-list-container" class="p-6">
-                <!-- Loading Spinner -->
+                <!-- Loading Spinner displayed while tasks are being fetched -->
                 <div id="loader" class="flex justify-center items-center py-8">
                     <div class="loader"></div>
                 </div>
-                <!-- Task list will be rendered here -->
+                <!-- Unordered list where tasks will be dynamically rendered -->
                 <ul id="task-list" class="space-y-3"></ul>
-                <!-- Message for when there are no tasks -->
+                <!-- Message displayed when there are no tasks in the list -->
                 <p id="no-tasks-message" class="text-center text-gray-500 dark:text-gray-400 py-8 hidden">You have no tasks yet. Add one above!</p>
             </div>
             
-            <!-- Footer with User ID -->
+            <!-- Footer section displaying the user ID -->
             <div id="user-info" class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 rounded-b-xl hidden">
-                 <p class="text-center text-xs text-gray-500 dark:text-gray-400">
-                    <span class="font-semibold">User ID:</span> <span id="user-id-display"></span>
-                 </p>
+                   <p class="text-center text-xs text-gray-500 dark:text-gray-400">
+                     <span class="font-semibold">User ID:</span> <span id="user-id-display"></span>
+                   </p>
             </div>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK and application logic -->
     <script type="module">
         // Import necessary functions from the Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -87,17 +88,21 @@
 
         // --- Firebase Configuration and Initialization ---
 
-        // PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
+        // Your web app's Firebase configuration (provided by the user)
         const firebaseConfig = {
-                apiKey: "AIzaSy...",
-                authDomain: "your-project-id.firebaseapp.com",
-                projectId: "your-project-id",
-                storageBucket: "your-project-id.appspot.com",
-                messagingSenderId: "1234567890",
-                appId: "1:1234567890:web:abcdef123456"
-                };
-            const appId = 'my-github-todo-app'; // You can keep this or change i```
-                
+            apiKey: "AIzaSyCCRxE1rEcfBaDDfiMLGxJv3OzayfoKdlE",
+            authDomain: "to-do-b88d9.firebaseapp.com",
+            projectId: "to-do-b88d9",
+            storageBucket: "to-do-b88d9.firebasestorage.app",
+            messagingSenderId: "930590755387",
+            appId: "1:930590755387:web:4fd3ffabd9cadce05cea1e",
+            measurementId: "G-82WJ2HMWTY"
+        };
+        
+        // Define appId using the global __app_id variable provided by the Canvas environment
+        // Fallback to 'default-app-id' if __app_id is not defined.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        
         // Enable detailed logging for debugging Firestore.
         setLogLevel('debug');
 
@@ -120,11 +125,12 @@
          */
         async function main() {
             try {
-                // Initialize Firebase services
+                // Initialize Firebase services with the provided configuration
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
                 
+                // Set persistence to browser local storage to remember user sessions
                 await setPersistence(auth, browserLocalPersistence);
 
                 // Listen for changes in authentication state
@@ -163,14 +169,17 @@
         }
         
         /**
-         * Signs the user in, either with a custom token if provided, or anonymously.
+         * Signs the user in, either with a custom token if provided (from Canvas environment),
+         * or anonymously if no custom token is available.
          */
         async function signIn() {
             try {
+                // Check if a custom authentication token is provided by the Canvas environment
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                     console.log("Signed in with custom token.");
                 } else {
+                    // If no custom token, sign in anonymously
                     await signInAnonymously(auth);
                     console.log("Signed in anonymously.");
                 }
@@ -182,60 +191,66 @@
 
         /**
          * Sets up a real-time listener for the user's tasks in Firestore.
+         * The `onSnapshot` function provides real-time updates as data changes.
          */
         function listenForTasks() {
-            if (!tasksCollectionRef) return;
+            if (!tasksCollectionRef) {
+                console.warn("tasksCollectionRef is not initialized. Cannot listen for tasks.");
+                return;
+            }
             
-            // The q object is a query against the collection.
+            // Create a query for the user's tasks collection
             const q = query(tasksCollectionRef);
 
             // onSnapshot creates a real-time listener.
             // The callback function will be executed every time the data changes.
             unsubscribeTasks = onSnapshot(q, (querySnapshot) => {
                 const tasks = [];
+                // Iterate over each document in the snapshot and add to tasks array
                 querySnapshot.forEach((doc) => {
                     tasks.push({ id: doc.id, ...doc.data() });
                 });
-                renderTasks(tasks);
+                renderTasks(tasks); // Render the fetched tasks to the UI
             }, (error) => {
                 console.error("Error fetching tasks:", error);
+                // Display an error message if tasks cannot be fetched
                 loader.innerHTML = '<p class="text-red-500">Error: Could not fetch tasks.</p>';
             });
         }
 
         /**
          * Renders the list of tasks to the DOM.
-         * @param {Array} tasks - An array of task objects.
+         * Tasks are sorted so that incomplete tasks appear before completed ones.
+         * @param {Array} tasks - An array of task objects to be rendered.
          */
         function renderTasks(tasks) {
-            // Clear the existing list
+            // Clear the existing list items from the DOM
             taskList.innerHTML = '';
 
-            // Hide the loader
+            // Hide the loading spinner as tasks are now ready to be displayed
             loader.style.display = 'none';
 
             if (tasks.length === 0) {
-                // Show the "no tasks" message if the list is empty
+                // If no tasks, show the "no tasks" message
                 noTasksMessage.classList.remove('hidden');
             } else {
-                // Hide the "no tasks" message
+                // If tasks exist, hide the "no tasks" message
                 noTasksMessage.classList.add('hidden');
                 
-                // Sort tasks so that incomplete ones are at the top
+                // Sort tasks: incomplete (false) first, then completed (true)
                 tasks.sort((a, b) => a.completed - b.completed);
                 
+                // Iterate over sorted tasks and create list items for each
                 tasks.forEach(task => {
                     const li = document.createElement('li');
-                    li.className = `flex items-center justify-between p-4 bg-white dark:bg-gray-700/50 rounded-lg shadow-sm transition-all duration-300`;
-                    li.dataset.id = task.id;
+                    // Apply Tailwind classes for styling, including opacity for completed tasks
+                    li.className = `flex items-center justify-between p-4 bg-white dark:bg-gray-700/50 rounded-lg shadow-sm transition-all duration-300 ${task.completed ? 'opacity-60' : ''}`;
+                    li.dataset.id = task.id; // Store Firestore document ID for later reference
 
-                    // Add a class if the task is completed for styling
-                    if (task.completed) {
-                        li.classList.add('opacity-60');
-                    }
-
+                    // Determine CSS class for task text based on completion status
                     const taskTextClass = task.completed ? 'completed' : '';
 
+                    // Set the inner HTML for the list item, including checkbox and delete button
                     li.innerHTML = `
                         <div class="flex items-center gap-4">
                             <input type="checkbox" ${task.completed ? 'checked' : ''} class="task-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
@@ -245,57 +260,64 @@
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     `;
-                    taskList.appendChild(li);
+                    taskList.appendChild(li); // Add the new list item to the task list
                 });
             }
         }
         
         /**
-         * Handles the form submission to add a new task.
+         * Handles the form submission to add a new task to Firestore.
+         * Prevents default form submission and adds the task with a 'completed' status of false.
          */
         addTaskForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const taskText = taskInput.value.trim();
+            e.preventDefault(); // Prevent page reload
+            const taskText = taskInput.value.trim(); // Get and trim the task text
 
+            // Only proceed if task text is not empty and tasksCollectionRef is available
             if (taskText && tasksCollectionRef) {
                 try {
                     // Add a new document to the Firestore collection
                     await addDoc(tasksCollectionRef, {
                         text: taskText,
-                        completed: false,
-                        createdAt: new Date() // Store creation timestamp
+                        completed: false, // New tasks are incomplete by default
+                        createdAt: new Date() // Store creation timestamp for potential sorting/ordering
                     });
-                    taskInput.value = ''; // Clear the input field
+                    taskInput.value = ''; // Clear the input field after successful addition
                 } catch (error) {
                     console.error("Error adding task: ", error);
+                    // In a production app, you might show a user-friendly message here
                 }
             }
         });
 
         /**
-         * Handles clicks on the task list for deleting or toggling completion.
-         * Uses event delegation to listen for clicks on child elements.
+         * Handles clicks on the task list using event delegation.
+         * Detects clicks on delete buttons and checkboxes to perform respective actions.
          */
         taskList.addEventListener('click', async (e) => {
-            const target = e.target;
-            const li = target.closest('li');
+            const target = e.target; // The element that was clicked
+            const li = target.closest('li'); // Find the closest parent <li> element
+
+            // If no <li> element is found, it means a non-task element was clicked
             if (!li) return;
             
-            const docId = li.dataset.id;
+            const docId = li.dataset.id; // Get the Firestore document ID from the <li>'s data-id attribute
+            // Construct a reference to the specific document in Firestore
             const docRef = doc(db, `artifacts/${appId}/users/${userId}/tasks`, docId);
 
-            // Check if the delete button was clicked
+            // Check if the clicked element or its parent is the delete button
             if (target.closest('.delete-btn')) {
                 try {
-                    await deleteDoc(docRef);
+                    await deleteDoc(docRef); // Delete the document from Firestore
                 } catch (error) {
                     console.error("Error deleting task: ", error);
                 }
             }
-            // Check if the checkbox was clicked
+            // Check if the clicked element is the checkbox
             else if (target.classList.contains('task-checkbox')) {
-                const isCompleted = target.checked;
+                const isCompleted = target.checked; // Get the current checked state of the checkbox
                 try {
+                    // Update the 'completed' field of the document in Firestore
                     await updateDoc(docRef, {
                         completed: isCompleted
                     });
@@ -306,6 +328,7 @@
         });
 
         // --- Application Start ---
+        // Call the main function to initialize the application when the script loads
         main();
 
     </script>

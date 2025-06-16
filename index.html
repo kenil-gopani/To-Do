@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time To-Do App</title>
+    <title>Real-Time To-Do App (Glass UI)</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -16,11 +16,18 @@
         /* Use Inter font family for the entire body */
         body {
             font-family: 'Inter', sans-serif;
+            /* Background for glassmorphism effect */
+            background: linear-gradient(135deg, #a8c0ff, #3f2b96); /* A cool, vibrant gradient */
+            min-height: 100vh; /* Ensure body takes full viewport height */
+            display: flex; /* Flexbox for centering content */
+            align-items: center; /* Center vertically */
+            justify-content: center; /* Center horizontally */
+            padding: 1rem; /* Add some padding around the content */
         }
         /* Custom styling for completed tasks to add a line-through and fade */
         .completed {
             text-decoration: line-through;
-            color: #9ca3af; /* gray-400 */
+            color: rgba(255, 255, 255, 0.5); /* Lighter gray for completed tasks in glass UI */
         }
         /* Style for the loading spinner animation */
         .loader {
@@ -36,23 +43,103 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Glassmorphism effect for main container */
+        .glass-container {
+            background: rgba(255, 255, 255, 0.15); /* Slightly transparent white background */
+            backdrop-filter: blur(10px); /* Frosted glass effect */
+            -webkit-backdrop-filter: blur(10px); /* For Safari support */
+            border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle white border */
+            border-radius: 20px; /* More rounded corners */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2); /* Enhanced shadow for depth */
+            /* Text inside glass container should be light by default */
+            color: #ffffff;
+        }
+
+        /* Adjust colors for elements inside the glass container for better contrast */
+        .glass-container h1 {
+            color: #ffffff; /* White for heading */
+        }
+        .glass-container p {
+            color: rgba(255, 255, 255, 0.7); /* Slightly transparent white for paragraphs */
+        }
+        .glass-container input {
+            background: rgba(255, 255, 255, 0.1); /* Transparent input background */
+            border-color: rgba(255, 255, 255, 0.3); /* Lighter border for inputs */
+            color: #ffffff; /* White text for input */
+        }
+        .glass-container input::placeholder {
+            color: rgba(255, 255, 255, 0.6); /* Lighter placeholder text */
+        }
+        .glass-container input:focus {
+            ring-color: rgba(255, 255, 255, 0.5); /* White ring on focus */
+            border-color: rgba(255, 255, 255, 0.5); /* White border on focus */
+        }
+        .glass-container button {
+            background: rgba(66, 153, 225, 0.7); /* Slightly transparent blue for buttons */
+            border: 1px solid rgba(255, 255, 255, 0.3); /* Subtle white border for buttons */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Soft shadow for buttons */
+        }
+        .glass-container button:hover {
+            background: rgba(66, 153, 225, 0.9); /* More opaque blue on hover */
+        }
+
+        /* Glassmorphism for task list items */
+        .task-item-glass {
+            background: rgba(255, 255, 255, 0.1); /* Very subtle transparent white */
+            border: 1px solid rgba(255, 255, 255, 0.15); /* Fainter border */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Lighter shadow */
+            color: #ffffff; /* White text for tasks */
+        }
+        .task-item-glass .task-checkbox {
+            border-color: rgba(255, 255, 255, 0.5); /* White checkbox border */
+            background-color: rgba(255, 255, 255, 0.2); /* Semi-transparent checkbox background */
+        }
+        .task-item-glass .task-checkbox:checked {
+            background-color: #3498db; /* Blue when checked */
+            border-color: #3498db;
+        }
+        .task-item-glass .task-text {
+            color: #ffffff; /* Default task text color */
+        }
+        .task-item-glass .delete-btn {
+            color: rgba(255, 255, 255, 0.6); /* Lighter trash icon */
+        }
+        .task-item-glass .delete-btn:hover {
+            color: #ef4444; /* Red on hover */
+        }
+        .glass-container .loader {
+            border-top-color: #ffffff; /* White loader top */
+        }
+        .glass-container .text-red-500 {
+            color: #ef4444; /* Keep error text red */
+        }
+        /* Footer styling for glass UI */
+        .glass-footer {
+            background: rgba(255, 255, 255, 0.05); /* Very subtle transparent background */
+            border-top: 1px solid rgba(255, 255, 255, 0.1); /* Fainter border */
+        }
+        .glass-footer p {
+            color: rgba(255, 255, 255, 0.5); /* Light gray for footer text */
+        }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex items-center justify-center min-h-screen">
+<body class="flex items-center justify-center min-h-screen">
 
     <div class="w-full max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div class="bg-white dark:bg-gray-800 shadow-lg rounded-xl">
+        <!-- Main container with glassmorphism effect -->
+        <div class="glass-container shadow-lg rounded-xl">
             <!-- Header section of the To-Do app -->
             <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                <h1 class="text-2xl sm:text-3xl font-bold text-center text-gray-800 dark:text-white">My To-Do List</h1>
-                <p class="text-center text-gray-500 dark:text-gray-400 mt-1">Your tasks are saved in real-time.</p>
+                <h1 class="text-2xl sm:text-3xl font-bold text-center">My To-Do List</h1>
+                <p class="text-center mt-1">Your tasks are saved in real-time.</p>
             </div>
 
             <!-- Form for adding new tasks -->
             <div class="p-6">
                 <form id="add-task-form" class="flex flex-col sm:flex-row gap-3">
-                    <input type="text" id="task-input" placeholder="What do you need to do?" class="flex-grow px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none transition" required>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <input type="text" id="task-input" placeholder="What do you need to do?" class="flex-grow px-4 py-3 rounded-lg focus:ring-2 focus:outline-none transition" required>
+                    <button type="submit" class="font-semibold px-6 py-3 rounded-lg transition shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white">
                         <i class="fas fa-plus mr-2"></i> Add Task
                     </button>
                 </form>
@@ -67,12 +154,12 @@
                 <!-- Unordered list where tasks will be dynamically rendered -->
                 <ul id="task-list" class="space-y-3"></ul>
                 <!-- Message displayed when there are no tasks in the list -->
-                <p id="no-tasks-message" class="text-center text-gray-500 dark:text-gray-400 py-8 hidden">You have no tasks yet. Add one above!</p>
+                <p id="no-tasks-message" class="text-center py-8 hidden">You have no tasks yet. Add one above!</p>
             </div>
             
             <!-- Footer section displaying the user ID -->
-            <div id="user-info" class="p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 rounded-b-xl hidden">
-                   <p class="text-center text-xs text-gray-500 dark:text-gray-400">
+            <div id="user-info" class="glass-footer p-4 rounded-b-xl hidden">
+                   <p class="text-center text-xs">
                      <span class="font-semibold">User ID:</span> <span id="user-id-display"></span>
                    </p>
             </div>
@@ -243,8 +330,8 @@
                 // Iterate over sorted tasks and create list items for each
                 tasks.forEach(task => {
                     const li = document.createElement('li');
-                    // Apply Tailwind classes for styling, including opacity for completed tasks
-                    li.className = `flex items-center justify-between p-4 bg-white dark:bg-gray-700/50 rounded-lg shadow-sm transition-all duration-300 ${task.completed ? 'opacity-60' : ''}`;
+                    // Apply Tailwind classes and the new 'task-item-glass' class for glassmorphism
+                    li.className = `flex items-center justify-between p-4 rounded-lg shadow-sm transition-all duration-300 task-item-glass ${task.completed ? 'opacity-60' : ''}`;
                     li.dataset.id = task.id; // Store Firestore document ID for later reference
 
                     // Determine CSS class for task text based on completion status
@@ -254,9 +341,9 @@
                     li.innerHTML = `
                         <div class="flex items-center gap-4">
                             <input type="checkbox" ${task.completed ? 'checked' : ''} class="task-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
-                            <span class="task-text text-gray-800 dark:text-gray-200 ${taskTextClass}">${task.text}</span>
+                            <span class="task-text ${taskTextClass}">${task.text}</span>
                         </div>
-                        <button class="delete-btn text-gray-400 hover:text-red-500 transition-colors">
+                        <button class="delete-btn">
                             <i class="fas fa-trash-alt"></i>
                         </button>
                     `;

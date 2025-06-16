@@ -72,7 +72,7 @@
             color: rgba(255, 255, 255, 0.6); /* Lighter placeholder text */
         }
         .glass-container input:focus {
-            ring-color: rgba(255, 255, 255, 0.5); /* White ring on focus */
+            --tw-ring-color: rgba(255, 255, 255, 0.5); /* White ring on focus */
             border-color: rgba(255, 255, 255, 0.5); /* White border on focus */
         }
         .glass-container button {
@@ -122,6 +122,19 @@
         .glass-footer p {
             color: rgba(255, 255, 255, 0.5); /* Light gray for footer text */
         }
+
+        /* New styling for "soft-deleted" tasks */
+        .soft-deleted {
+            opacity: 0.3 !important; /* Make it much more transparent */
+            pointer-events: none; /* Disable clicks on text and checkbox when soft-deleted */
+        }
+        .soft-deleted .delete-btn {
+            pointer-events: all; /* Re-enable clicks on the button itself */
+            color: #4CAF50; /* Green for "undo" button */
+        }
+        .soft-deleted .delete-btn:hover {
+            color: #66bb6a; /* Lighter green on hover for "undo" */
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen">
@@ -130,7 +143,7 @@
         <!-- Main container with glassmorphism effect -->
         <div class="glass-container shadow-lg rounded-xl">
             <!-- Header section of the To-Do app -->
-            <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div class="p-6 border-b border-gray-200">
                 <h1 class="text-2xl sm:text-3xl font-bold text-center">My To-Do List</h1>
                 <p class="text-center mt-1">Your tasks are saved in real-time.</p>
             </div>
@@ -287,6 +300,7 @@
             }
             
             // Create a query for the user's tasks collection
+            // Tasks will be fetched regardless of their 'deleted' status
             const q = query(tasksCollectionRef);
 
             // onSnapshot creates a real-time listener.
@@ -307,7 +321,7 @@
 
         /**
          * Renders the list of tasks to the DOM.
-         * Tasks are sorted so that incomplete tasks appear before completed ones.
+         * Tasks are sorted: non-deleted completed, non-deleted incomplete, then deleted tasks.
          * @param {Array} tasks - An array of task objects to be rendered.
          */
         function renderTasks(tasks) {
@@ -324,27 +338,42 @@
                 // If tasks exist, hide the "no tasks" message
                 noTasksMessage.classList.add('hidden');
                 
-                // Sort tasks: incomplete (false) first, then completed (true)
-                tasks.sort((a, b) => a.completed - b.completed);
+                // Custom sorting:
+                // 1. Non-deleted, incomplete tasks
+                // 2. Non-deleted, completed tasks
+                // 3. Deleted tasks (regardless of completed status, but they will be faded)
+                tasks.sort((a, b) => {
+                    // Sort by 'deleted' status first: false (not deleted) comes before true (deleted)
+                    if (a.deleted && !b.deleted) return 1;
+                    if (!a.deleted && b.deleted) return -1;
+
+                    // If both have same 'deleted' status, then sort by 'completed' status
+                    // false (incomplete) comes before true (completed)
+                    return a.completed - b.completed;
+                });
                 
                 // Iterate over sorted tasks and create list items for each
                 tasks.forEach(task => {
                     const li = document.createElement('li');
                     // Apply Tailwind classes and the new 'task-item-glass' class for glassmorphism
-                    li.className = `flex items-center justify-between p-4 rounded-lg shadow-sm transition-all duration-300 task-item-glass ${task.completed ? 'opacity-60' : ''}`;
+                    // Also apply 'soft-deleted' class if the task is marked as deleted
+                    li.className = `flex items-center justify-between p-4 rounded-lg shadow-sm transition-all duration-300 task-item-glass ${task.completed ? 'opacity-60' : ''} ${task.deleted ? 'soft-deleted' : ''}`;
                     li.dataset.id = task.id; // Store Firestore document ID for later reference
 
                     // Determine CSS class for task text based on completion status
                     const taskTextClass = task.completed ? 'completed' : '';
 
+                    // Determine the icon for the delete/undo button
+                    const buttonIconClass = task.deleted ? 'fas fa-undo-alt' : 'fas fa-trash-alt';
+
                     // Set the inner HTML for the list item, including checkbox and delete button
                     li.innerHTML = `
                         <div class="flex items-center gap-4">
-                            <input type="checkbox" ${task.completed ? 'checked' : ''} class="task-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                            <input type="checkbox" ${task.completed ? 'checked' : ''} ${task.deleted ? 'disabled' : ''} class="task-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
                             <span class="task-text ${taskTextClass}">${task.text}</span>
                         </div>
                         <button class="delete-btn">
-                            <i class="fas fa-trash-alt"></i>
+                            <i class="${buttonIconClass}"></i>
                         </button>
                     `;
                     taskList.appendChild(li); // Add the new list item to the task list
@@ -354,7 +383,8 @@
         
         /**
          * Handles the form submission to add a new task to Firestore.
-         * Prevents default form submission and adds the task with a 'completed' status of false.
+         * Prevents default form submission and adds the task with a 'completed' status of false
+         * and a 'deleted' status of false.
          */
         addTaskForm.addEventListener('submit', async (e) => {
             e.preventDefault(); // Prevent page reload
@@ -367,6 +397,7 @@
                     await addDoc(tasksCollectionRef, {
                         text: taskText,
                         completed: false, // New tasks are incomplete by default
+                        deleted: false,   // New tasks are not deleted by default
                         createdAt: new Date() // Store creation timestamp for potential sorting/ordering
                     });
                     taskInput.value = ''; // Clear the input field after successful addition
@@ -379,7 +410,7 @@
 
         /**
          * Handles clicks on the task list using event delegation.
-         * Detects clicks on delete buttons and checkboxes to perform respective actions.
+         * Detects clicks on delete/undo buttons and checkboxes to perform respective actions.
          */
         taskList.addEventListener('click', async (e) => {
             const target = e.target; // The element that was clicked
@@ -392,24 +423,36 @@
             // Construct a reference to the specific document in Firestore
             const docRef = doc(db, `artifacts/${appId}/users/${userId}/tasks`, docId);
 
-            // Check if the clicked element or its parent is the delete button
+            // Check if the clicked element or its parent is the delete/undo button
             if (target.closest('.delete-btn')) {
                 try {
-                    await deleteDoc(docRef); // Delete the document from Firestore
+                    // Get the current task state from the UI to determine if it's currently deleted
+                    const isCurrentlyDeleted = li.classList.contains('soft-deleted');
+                    
+                    // Toggle the 'deleted' status in Firestore
+                    await updateDoc(docRef, {
+                        deleted: !isCurrentlyDeleted,
+                        // If undeleting, also ensure it's not marked as completed if it was before
+                        // Or you could reset completed to false if undoing delete, depending on desired UX
+                        completed: isCurrentlyDeleted ? false : li.querySelector('.task-checkbox').checked
+                    });
                 } catch (error) {
-                    console.error("Error deleting task: ", error);
+                    console.error("Error toggling deleted status: ", error);
                 }
             }
             // Check if the clicked element is the checkbox
             else if (target.classList.contains('task-checkbox')) {
-                const isCompleted = target.checked; // Get the current checked state of the checkbox
-                try {
-                    // Update the 'completed' field of the document in Firestore
-                    await updateDoc(docRef, {
-                        completed: isCompleted
-                    });
-                } catch (error) {
-                    console.error("Error updating task: ", error);
+                // Only allow toggling completion if the task is NOT soft-deleted
+                if (!li.classList.contains('soft-deleted')) {
+                    const isCompleted = target.checked; // Get the current checked state of the checkbox
+                    try {
+                        // Update the 'completed' field of the document in Firestore
+                        await updateDoc(docRef, {
+                            completed: isCompleted
+                        });
+                    } catch (error) {
+                        console.error("Error updating task: ", error);
+                    }
                 }
             }
         });

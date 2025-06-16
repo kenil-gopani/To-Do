@@ -87,13 +87,17 @@
 
         // --- Firebase Configuration and Initialization ---
 
-        // These global variables are provided by the environment.
-        // __firebase_config: Contains the configuration keys for your Firebase project.
-        // __app_id: A unique identifier for this application instance.
-        // __initial_auth_token: A custom token for user authentication.
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-todo-app';
-        
+        // PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
+        const firebaseConfig = {
+                apiKey: "AIzaSy...",
+                authDomain: "your-project-id.firebaseapp.com",
+                projectId: "your-project-id",
+                storageBucket: "your-project-id.appspot.com",
+                messagingSenderId: "1234567890",
+                appId: "1:1234567890:web:abcdef123456"
+                };
+            const appId = 'my-github-todo-app'; // You can keep this or change i```
+                
         // Enable detailed logging for debugging Firestore.
         setLogLevel('debug');
 

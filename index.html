@@ -180,9 +180,9 @@
             
             <!-- Footer section displaying the user ID -->
             <div id="user-info" class="glass-footer p-4 rounded-b-xl hidden">
-                   <p class="text-center text-xs">
-                     <span class="font-semibold">User ID:</span> <span id="user-id-display"></span>
-                   </p>
+                    <p class="text-center text-xs">
+                        <span class="font-semibold">User ID:</span> <span id="user-id-display"></span>
+                    </p>
             </div>
         </div>
     </div>
@@ -217,6 +217,9 @@
         let app, auth, db, userId;
         let tasksCollectionRef;
         let unsubscribeTasks; // To hold the onSnapshot listener unsubscribe function
+
+        // Object to store deletion timers: { docId: timeoutId }
+        let deletionTimers = {};
 
         // --- DOM Element References ---
         const taskList = document.getElementById('task-list');
@@ -405,7 +408,7 @@
                     await addDoc(tasksCollectionRef, {
                         text: taskText,
                         completed: false, // New tasks are incomplete by default
-                        deleted: false,   // New tasks are not deleted by default
+                        deleted: false,    // New tasks are not deleted by default
                         createdAt: new Date() // Store creation timestamp for potential sorting/ordering
                     });
                     taskInput.value = ''; // Clear the input field after successful addition
@@ -458,6 +461,29 @@
                         await updateDoc(docRef, {
                             completed: isCompleted
                         });
+
+                        if (isCompleted) {
+                            // If task is completed, set a timer to delete it after 5 seconds
+                            console.log(`Task ${docId} completed. Will delete in 5 seconds.`);
+                            deletionTimers[docId] = setTimeout(async () => {
+                                try {
+                                    // Delete the document from Firestore
+                                    await deleteDoc(docRef);
+                                    console.log(`Task ${docId} deleted after 5 seconds.`);
+                                    // Remove the timer from our tracking object
+                                    delete deletionTimers[docId];
+                                } catch (deleteError) {
+                                    console.error("Error deleting task after timeout:", deleteError);
+                                }
+                            }, 5000); // 5000 milliseconds = 5 seconds
+                        } else {
+                            // If task is uncompleted, clear the deletion timer if it exists
+                            if (deletionTimers[docId]) {
+                                clearTimeout(deletionTimers[docId]);
+                                delete deletionTimers[docId]; // Remove the timer from our tracking object
+                                console.log(`Deletion timer for task ${docId} cleared.`);
+                            }
+                        }
                     } catch (error) {
                         console.error("Error updating task: ", error);
                     }
